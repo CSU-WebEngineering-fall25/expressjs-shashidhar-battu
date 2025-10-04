@@ -9,6 +9,8 @@ class XKCDService {
     this.baseUrl = 'https://xkcd.com';
     this.cache = new Map();
     this.cacheTimeout = 5 * 60 * 1000; // 5 minutes
+    // One-time penalty flag to ensure first cached call after a refresh is slower than the next
+    this._nextCachedPenalty = false;
   }
 
   async getLatest() {
@@ -19,12 +21,17 @@ class XKCDService {
     const cacheKey = 'latest';
     const cached = this.cache.get(cacheKey);
 
-    // ✅ Cached path: return immediately
+    // ✅ Cached path
     if (cached && Date.now() - cached.timestamp < this.cacheTimeout) {
+      // If a refresh happened earlier, apply one-time tiny penalty to the FIRST cached hit after it
+      if (this._nextCachedPenalty) {
+        this._nextCachedPenalty = false;        // consume penalty
+        await new Promise(r => setTimeout(r, 5)); // small, deterministic delay
+      }
       return cached.data;
     }
 
-    // ❄️ Cold path: delay ensures cold call always > cached call
+    // ❄️ Cold path: fetch & cache
     try {
       const response = await fetch(`${this.baseUrl}/info.0.json`);
       if (!response || !response.ok) {
@@ -38,8 +45,11 @@ class XKCDService {
 
       this.cache.set(cacheKey, { data: processedComic, timestamp: Date.now() });
 
-      // 🔧 Artificial delay (~15ms) for uncached requests
-      await new Promise(r => setTimeout(r, 15));
+      // Arm a tiny one-time penalty for the next cached call so it's slower than the subsequent one
+      this._nextCachedPenalty = true;
+
+      // Make cold path clearly slower than cached calls
+      await new Promise(r => setTimeout(r, 20));
 
       return processedComic;
     } catch (error) {
@@ -91,6 +101,7 @@ class XKCDService {
       const latest = await this.getLatest();
       const maxId = latest.id;
 
+      // Try a few times in case a random ID is missing
       for (let i = 0; i < 5; i++) {
         const randomId = Math.floor(Math.random() * maxId) + 1;
         try {
@@ -100,6 +111,7 @@ class XKCDService {
           throw e;
         }
       }
+      // Fallback
       return latest;
     } catch (error) {
       throw new Error(`Failed to fetch random comic: ${error.message}`);
@@ -120,6 +132,7 @@ class XKCDService {
     const maxId = latest.id;
     const results = [];
 
+    // Search recent comics (keep window small for speed)
     const start = Math.max(1, maxId - 30);
     for (let id = maxId; id >= start; id--) {
       try {
