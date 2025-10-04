@@ -1,11 +1,16 @@
 name: GitHub Classroom Workflow
 on: [push]
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - name: Run tests
-      run: |
-        pnpm install
-        pnpm test
+      - uses: actions/checkout@v2
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Run tests
+        run: |
+          pnpm install
+          pnpm test
