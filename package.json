@@ -11,10 +11,17 @@
     "test:coverage": "jest --coverage",
     "test:ci": "jest --ci --coverage --watchAll=false"
   },
-  "keywords": ["express", "api", "xkcd", "comics", "nodejs"],
+  "keywords": [
+    "express",
+    "api",
+    "xkcd",
+    "comics",
+    "nodejs"
+  ],
   "author": "Student Name",
   "license": "MIT",
   "dependencies": {
+    "cors": "^2.8.5",
     "express": "^4.18.2",
     "express-rate-limit": "^6.7.0",
     "express-validator": "^6.15.0",
